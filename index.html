@@ -368,7 +368,9 @@ const lightbox = document.getElementById('lightbox');
 const lightboxInner = document.getElementById('lightboxInner');
 
 function rawUrl(path){
-  return `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${path}`;
+  // jsDelivr serves GitHub files with proper inline content-types (no forced
+  // "download" behavior for PDFs the way raw.githubusercontent.com does).
+  return `https://cdn.jsdelivr.net/gh/${OWNER}/${REPO}@${BRANCH}/${path}`;
 }
 function blobUrl(path){
   return `https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/${path}`;
