@@ -384,7 +384,7 @@ function render(){
       ? `<img src="${rawUrl(f.path)}" loading="lazy" alt="${escapeAttr(niceName(f.name))}">`
       : (isPdf ? pdfSvg() : fileSvg());
     html += `
-      <div class="tile" onclick="openFile(${JSON.stringify(f.path)}, ${JSON.stringify(f.name)}, '${ext}')">
+      <div class="tile" onclick="openFile('${escapeAttr(f.path)}', '${escapeAttr(f.name)}', '${ext}')">
         <div class="tile-thumb">${thumb}</div>
         <div class="tile-label">${niceName(f.name)}<span class="kind">${ext || 'file'}</span></div>
       </div>`;
