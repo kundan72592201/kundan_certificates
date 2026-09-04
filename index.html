@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kundan Kumar — Certificate Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1B2D;
+    --surface:#16243A;
+    --surface-hover:#1D2E48;
+    --gold:#C9A227;
+    --teal:#4A9099;
+    --text:#EDE6D6;
+    --text-muted:#93A0B4;
+    --border:#26364F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  header{
+    padding:56px 24px 32px;
+    max-width:1000px;
+    margin:0 auto;
+    text-align:left;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:38px;
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    color:var(--text-muted);
+    font-size:15px;
+    margin:0;
+    max-width:520px;
+    line-height:1.6;
+  }
+  .config-bar{
+    max-width:1000px;
+    margin:0 auto;
+    padding:0 24px 24px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .config-bar input{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:6px;
+    font-size:13px;
+    font-family:'Inter',sans-serif;
+    width:190px;
+  }
+  .config-bar button{
+    background:var(--gold);
+    color:#241C05;
+    border:none;
+    padding:8px 16px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .config-bar button:hover{opacity:0.9;}
+  .config-note{
+    font-size:12px;
+    color:var(--text-muted);
+    width:100%;
+  }
+  main{
+    max-width:1000px;
+    margin:0 auto;
+    padding:0 24px 80px;
+  }
+  .crumbs{
+    font-size:13px;
+    color:var(--text-muted);
+    margin:0 0 28px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+  }
+  .crumbs button{
+    background:none;
+    border:none;
+    color:var(--teal);
+    font-size:13px;
+    cursor:pointer;
+    padding:0;
+    font-family:'Inter',sans-serif;
+  }
+  .crumbs button:hover{text-decoration:underline;}
+  .crumbs .sep{color:var(--border);}
+  .status{
+    color:var(--text-muted);
+    font-size:14px;
+    padding:40px 0;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:20px;
+  }
+  .tile{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:border-color 0.15s ease, transform 0.15s ease;
+    display:flex;
+    flex-direction:column;
+  }
+  .tile:hover{
+    border-color:var(--gold);
+    transform:translateY(-2px);
+  }
+  .tile-thumb{
+    height:130px;
+    background:var(--surface-hover);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  .tile-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  .folder-icon, .file-icon{
+    width:42px;
+    height:42px;
+    opacity:0.85;
+  }
+  .tile-label{
+    padding:12px 14px;
+    font-size:13px;
+    line-height:1.4;
+    color:var(--text);
+    border-top:1px solid var(--border);
+  }
+  .tile-label .kind{
+    display:block;
+    font-size:11px;
+    color:var(--text-muted);
+    margin-top:3px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .badge-count{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(15,27,45,0.85);
+    color:var(--gold);
+    font-size:11px;
+    padding:2px 7px;
+    border-radius:10px;
+    border:1px solid var(--gold);
+  }
+  /* Lightbox */
+  .lightbox{
+    position:fixed;
+    inset:0;
+    background:rgba(8,14,24,0.92);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:32px;
+  }
+  .lightbox.open{display:flex;}
+  .lightbox-inner{
+    max-width:920px;
+    max-height:88vh;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+  .lightbox-inner img{
+    max-width:100%;
+    max-height:70vh;
+    border-radius:6px;
+    border:1px solid var(--border);
+  }
+  .lightbox-inner iframe{
+    width:100%;
+    height:70vh;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:#fff;
+  }
+  .lightbox-caption{
+    color:var(--text);
+    font-size:14px;
+    text-align:center;
+  }
+  .lightbox-actions{
+    display:flex;
+    gap:10px;
+  }
+  .lightbox-actions a, .lightbox-close{
+    color:var(--bg);
+    background:var(--gold);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    padding:8px 16px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .lightbox-close{
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Certificate gallery</h1>
+  <p>Every certificate I've earned, browsable by category. Pulled live from my GitHub repository — click a folder to open it, click a certificate to view it full size.</p>
+</header>
+
+<div class="config-bar" id="configBar" style="display:none;">
+  <input id="ownerInput" placeholder="GitHub username">
+  <input id="repoInput" placeholder="Repository name">
+  <input id="branchInput" placeholder="Branch (default: main)">
+  <input id="rootInput" placeholder="Root folder (optional)">
+  <button onclick="applyConfig()">Load</button>
+  <span class="config-note">Set once, then this stays saved in the page URL.</span>
+</div>
+
+<main>
+  <div class="crumbs" id="crumbs"></div>
+  <div id="content"><div class="status">Loading certificates…</div></div>
+</main>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-inner" id="lightboxInner"></div>
+</div>
+
+<script>
+/* ---- Configuration ----
+   Change these three values to point at your own repo, or pass them
+   as URL query params: ?owner=USER&repo=REPO&branch=main&root=FOLDER
+*/
+const params = new URLSearchParams(window.location.search);
+const OWNER  = params.get('owner')  || 'kundan72592201';
+const REPO   = params.get('repo')   || 'kundan_certificates';
+const BRANCH = params.get('branch') || 'main';
+const ROOT   = params.get('root')   || 'certificates_kundan';
+
+const IMAGE_EXT = ['png','jpg','jpeg','gif','webp','svg','bmp'];
+const PDF_EXT = ['pdf'];
+
+let tree = null;       // flat list of {path, type}
+let rootNode = null;   // nested tree
+let currentPath = [];  // array of folder names from ROOT
+
+const contentEl = document.getElementById('content');
+const crumbsEl = document.getElementById('crumbs');
+const lightbox = document.getElementById('lightbox');
+const lightboxInner = document.getElementById('lightboxInner');
+
+function rawUrl(path){
+  return `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${path}`;
+}
+function blobUrl(path){
+  return `https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/${path}`;
+}
+function extOf(name){
+  const parts = name.split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+}
+function niceName(name){
+  return name.replace(/[_-]/g,' ').replace(/\.[^/.]+$/,'');
+}
+
+async function loadTree(){
+  try{
+    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
+    if(!res.ok) throw new Error('API request failed: ' + res.status);
+    const data = await res.json();
+    tree = data.tree.filter(item => item.type === 'blob' && item.path.startsWith(ROOT));
+    if(tree.length === 0){
+      contentEl.innerHTML = `<div class="status">No files found under "${ROOT}" in ${OWNER}/${REPO}. Check the folder name, or use the config fields above to point at the right repo.</div>`;
+      document.getElementById('configBar').style.display = 'flex';
+      return;
+    }
+    rootNode = buildTree(tree);
+    render();
+  }catch(err){
+    contentEl.innerHTML = `<div class="status">Couldn't load the repository (${err.message}). If this repo is private, this page needs a public repo to work — GitHub's API only allows anonymous reads on public repos. You can also check the folder/repo names below.</div>`;
+    document.getElementById('configBar').style.display = 'flex';
+  }
+}
+
+function buildTree(files){
+  const root = { name: ROOT, folders: {}, files: [] };
+  files.forEach(f => {
+    const rel = f.path.slice(ROOT.length).replace(/^\//,'');
+    const parts = rel.split('/');
+    let node = root;
+    for(let i=0;i<parts.length-1;i++){
+      const part = parts[i];
+      if(!node.folders[part]) node.folders[part] = { name: part, folders:{}, files:[] };
+      node = node.folders[part];
+    }
+    const filename = parts[parts.length-1];
+    if(filename) node.files.push({ name: filename, path: f.path });
+  });
+  return root;
+}
+
+function currentNode(){
+  let node = rootNode;
+  for(const p of currentPath){
+    node = node.folders[p];
+    if(!node) return rootNode;
+  }
+  return node;
+}
+
+function countAll(node){
+  let n = node.files.length;
+  Object.values(node.folders).forEach(f => n += countAll(f));
+  return n;
+}
+
+function render(){
+  renderCrumbs();
+  const node = currentNode();
+  const folderNames = Object.keys(node.folders).sort();
+  const files = node.files.slice().sort((a,b) => a.name.localeCompare(b.name));
+
+  if(folderNames.length === 0 && files.length === 0){
+    contentEl.innerHTML = `<div class="status">This folder is empty.</div>`;
+    return;
+  }
+
+  let html = '<div class="grid">';
+
+  folderNames.forEach(name => {
+    const sub = node.folders[name];
+    const count = countAll(sub);
+    html += `
+      <div class="tile" onclick="openFolder('${escapeAttr(name)}')">
+        <div class="tile-thumb">
+          ${folderSvg()}
+          <span class="badge-count">${count}</span>
+        </div>
+        <div class="tile-label">${niceName(name)}<span class="kind">Folder</span></div>
+      </div>`;
+  });
+
+  files.forEach((f, i) => {
+    const ext = extOf(f.name);
+    const isImg = IMAGE_EXT.includes(ext);
+    const isPdf = PDF_EXT.includes(ext);
+    const thumb = isImg
+      ? `<img src="${rawUrl(f.path)}" loading="lazy" alt="${escapeAttr(niceName(f.name))}">`
+      : (isPdf ? pdfSvg() : fileSvg());
+    html += `
+      <div class="tile" onclick="openFile(${JSON.stringify(f.path)}, ${JSON.stringify(f.name)}, '${ext}')">
+        <div class="tile-thumb">${thumb}</div>
+        <div class="tile-label">${niceName(f.name)}<span class="kind">${ext || 'file'}</span></div>
+      </div>`;
+  });
+
+  html += '</div>';
+  contentEl.innerHTML = html;
+}
+
+function renderCrumbs(){
+  let html = `<button onclick="goTo(0)">${niceName(ROOT)}</button>`;
+  currentPath.forEach((name, i) => {
+    html += `<span class="sep">/</span><button onclick="goTo(${i+1})">${niceName(name)}</button>`;
+  });
+  crumbsEl.innerHTML = html;
+}
+
+function openFolder(name){
+  currentPath.push(name);
+  render();
+}
+function goTo(depth){
+  currentPath = currentPath.slice(0, depth);
+  render();
+}
+
+function openFile(path, name, ext){
+  let inner = '';
+  if(IMAGE_EXT.includes(ext)){
+    inner = `<img src="${rawUrl(path)}" alt="${escapeAttr(niceName(name))}">`;
+  } else if(PDF_EXT.includes(ext)){
+    inner = `<iframe src="${rawUrl(path)}"></iframe>`;
+  } else {
+    inner = `<div class="lightbox-caption">Preview isn't available for this file type — open it directly.</div>`;
+  }
+  lightboxInner.innerHTML = `
+    ${inner}
+    <div class="lightbox-caption">${niceName(name)}</div>
+    <div class="lightbox-actions">
+      <a href="${rawUrl(path)}" target="_blank" rel="noopener">Open original</a>
+      <button class="lightbox-close" onclick="closeLightbox()">Close</button>
+    </div>`;
+  lightbox.classList.add('open');
+}
+function closeLightbox(){
+  lightbox.classList.remove('open');
+  lightboxInner.innerHTML = '';
+}
+lightbox.addEventListener('click', (e) => { if(e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeLightbox(); });
+
+function escapeAttr(s){
+  return String(s).replace(/'/g, "\\'").replace(/"/g,'&quot;');
+}
+function folderSvg(){
+  return `<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`;
+}
+function pdfSvg(){
+  return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="#4A9099" stroke-width="1.5"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/><text x="7" y="17" font-size="6" fill="#4A9099" stroke="none" font-family="sans-serif">PDF</text></svg>`;
+}
+function fileSvg(){
+  return `<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="#93A0B4" stroke-width="1.5"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/></svg>`;
+}
+
+function applyConfig(){
+  const owner = document.getElementById('ownerInput').value.trim() || OWNER;
+  const repo = document.getElementById('repoInput').value.trim() || REPO;
+  const branch = document.getElementById('branchInput').value.trim() || BRANCH;
+  const root = document.getElementById('rootInput').value.trim() || ROOT;
+  const url = new URL(window.location.href);
+  url.searchParams.set('owner', owner);
+  url.searchParams.set('repo', repo);
+  url.searchParams.set('branch', branch);
+  url.searchParams.set('root', root);
+  window.location.href = url.toString();
+}
+
+loadTree();
+</script>
+</body>
+</html>
