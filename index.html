@@ -111,6 +111,52 @@
     font-size:14px;
     padding:40px 0;
   }
+  .search-bar{
+    position:relative;
+    margin:0 0 12px;
+  }
+  .search-bar input{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:12px 16px 12px 40px;
+    border-radius:8px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .search-bar input:focus{
+    outline:none;
+    border-color:var(--gold);
+  }
+  .search-bar input::placeholder{ color:var(--text-muted); }
+  .search-icon{
+    position:absolute;
+    left:13px;
+    top:50%;
+    transform:translateY(-50%);
+    width:16px;
+    height:16px;
+    pointer-events:none;
+  }
+  .search-clear{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    font-size:13px;
+    cursor:pointer;
+    display:none;
+  }
+  .search-bar.has-query .search-clear{ display:block; }
+  .search-status{
+    font-size:13px;
+    color:var(--text-muted);
+    margin:0 0 20px;
+  }
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
@@ -121,7 +167,6 @@
     border:1px solid var(--border);
     border-radius:10px;
     overflow:hidden;
-    cursor:pointer;
     transition:border-color 0.15s ease, transform 0.15s ease;
     display:flex;
     flex-direction:column;
@@ -130,6 +175,7 @@
     border-color:var(--gold);
     transform:translateY(-2px);
   }
+  .tile-thumb{ cursor:pointer; }
   .tile-thumb{
     height:130px;
     background:var(--surface-hover);
@@ -143,14 +189,16 @@
     width:100%;
     height:100%;
     object-fit:cover;
+    pointer-events:none; /* let clicks/taps hit the wrapping div reliably */
   }
   .folder-icon, .file-icon{
     width:42px;
     height:42px;
     opacity:0.85;
+    pointer-events:none;
   }
   .tile-label{
-    padding:12px 14px;
+    padding:12px 14px 4px;
     font-size:13px;
     line-height:1.4;
     color:var(--text);
@@ -163,6 +211,31 @@
     margin-top:3px;
     text-transform:uppercase;
     letter-spacing:0.04em;
+  }
+  .tile-path{
+    display:block;
+    font-size:11px;
+    color:var(--teal);
+    margin-top:3px;
+    word-break:break-word;
+  }
+  .tile-btn{
+    margin:10px 14px 14px;
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    text-align:center;
+  }
+  .tile-btn:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:rgba(201,162,39,0.08);
   }
   .badge-count{
     position:absolute;
@@ -254,6 +327,12 @@
 </div>
 
 <main>
+  <div class="search-bar" id="searchBar">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="#93A0B4" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input type="text" id="searchInput" placeholder="Search certificates and folders…" oninput="onSearchInput()">
+    <button class="search-clear" onclick="clearSearch()">Clear</button>
+  </div>
+  <div class="search-status" id="searchStatus" style="display:none;"></div>
   <div class="crumbs" id="crumbs"></div>
   <div id="content"><div class="status">Loading certificates…</div></div>
 </main>
@@ -279,9 +358,12 @@ const PDF_EXT = ['pdf'];
 let tree = null;       // flat list of {path, type}
 let rootNode = null;   // nested tree
 let currentPath = [];  // array of folder names from ROOT
+let searchQuery = '';  // current search text
 
 const contentEl = document.getElementById('content');
 const crumbsEl = document.getElementById('crumbs');
+const searchBarEl = document.getElementById('searchBar');
+const searchStatusEl = document.getElementById('searchStatus');
 const lightbox = document.getElementById('lightbox');
 const lightboxInner = document.getElementById('lightboxInner');
 
@@ -351,6 +433,12 @@ function countAll(node){
 }
 
 function render(){
+  if(searchQuery.trim()){
+    renderSearchResults();
+    return;
+  }
+  searchStatusEl.style.display = 'none';
+  crumbsEl.style.display = 'flex';
   renderCrumbs();
   const node = currentNode();
   const folderNames = Object.keys(node.folders).sort();
@@ -366,32 +454,56 @@ function render(){
   folderNames.forEach(name => {
     const sub = node.folders[name];
     const count = countAll(sub);
-    html += `
-      <div class="tile" onclick="openFolder('${escapeAttr(name)}')">
-        <div class="tile-thumb">
-          ${folderSvg()}
-          <span class="badge-count">${count}</span>
-        </div>
-        <div class="tile-label">${niceName(name)}<span class="kind">Folder</span></div>
-      </div>`;
+    html += folderTileHtml(name, [...currentPath, name], count);
   });
 
-  files.forEach((f, i) => {
-    const ext = extOf(f.name);
-    const isImg = IMAGE_EXT.includes(ext);
-    const isPdf = PDF_EXT.includes(ext);
-    const thumb = isImg
-      ? `<img src="${rawUrl(f.path)}" loading="lazy" alt="${escapeAttr(niceName(f.name))}">`
-      : (isPdf ? pdfSvg() : fileSvg());
-    html += `
-      <div class="tile" onclick="openFile('${escapeAttr(f.path)}', '${escapeAttr(f.name)}', '${ext}')">
-        <div class="tile-thumb">${thumb}</div>
-        <div class="tile-label">${niceName(f.name)}<span class="kind">${ext || 'file'}</span></div>
-      </div>`;
+  files.forEach(f => {
+    html += fileTileHtml(f);
   });
 
   html += '</div>';
   contentEl.innerHTML = html;
+}
+
+function folderTileHtml(name, pathArr, count){
+  const pathJson = escapeAttr(JSON.stringify(pathArr));
+  return `
+      <div class="tile">
+        <div class="tile-thumb" onclick='openFolderPath(${pathJson})'>
+          ${folderSvg()}
+          <span class="badge-count">${count}</span>
+        </div>
+        <div class="tile-label">${niceName(name)}<span class="kind">Folder</span></div>
+        <button class="tile-btn" onclick='openFolderPath(${pathJson})'>Open folder</button>
+      </div>`;
+}
+
+function fileTileHtml(f, showPath){
+  const ext = extOf(f.name);
+  const isImg = IMAGE_EXT.includes(ext);
+  const isPdf = PDF_EXT.includes(ext);
+  const thumb = isImg
+    ? `<img src="${rawUrl(f.path)}" loading="lazy" alt="${escapeAttr(niceName(f.name))}">`
+    : (isPdf ? pdfSvg() : fileSvg());
+  const argJson = escapeAttr(JSON.stringify([f.path, f.name, ext]));
+  return `
+      <div class="tile">
+        <div class="tile-thumb" onclick='openFileArgs(${argJson})'>${thumb}</div>
+        <div class="tile-label">${niceName(f.name)}<span class="kind">${ext || 'file'}</span>${showPath ? `<span class="tile-path">${escapeHtml(f.path)}</span>` : ''}</div>
+        <button class="tile-btn" onclick='openFileArgs(${argJson})'>Open</button>
+      </div>`;
+}
+
+function openFolderPath(pathArr){
+  currentPath = pathArr;
+  // clear search so browsing view takes over
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  searchBarEl.classList.remove('has-query');
+  render();
+}
+function openFileArgs(args){
+  openFile(args[0], args[1], args[2]);
 }
 
 function renderCrumbs(){
@@ -436,8 +548,75 @@ function closeLightbox(){
 lightbox.addEventListener('click', (e) => { if(e.target === lightbox) closeLightbox(); });
 document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeLightbox(); });
 
+/* ---------- Search ---------- */
+
+function onSearchInput(){
+  searchQuery = document.getElementById('searchInput').value;
+  searchBarEl.classList.toggle('has-query', searchQuery.trim().length > 0);
+  render();
+}
+
+function clearSearch(){
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  searchBarEl.classList.remove('has-query');
+  render();
+}
+
+/* Recursively collect every folder/file whose name matches the query. */
+function searchTree(node, pathArr, query, matchedFolders, matchedFiles){
+  Object.keys(node.folders).forEach(name => {
+    const sub = node.folders[name];
+    const fullPath = [...pathArr, name];
+    if(niceName(name).toLowerCase().includes(query)){
+      matchedFolders.push({ name, path: fullPath, count: countAll(sub) });
+    }
+    searchTree(sub, fullPath, query, matchedFolders, matchedFiles);
+  });
+  node.files.forEach(f => {
+    if(niceName(f.name).toLowerCase().includes(query)){
+      matchedFiles.push(f);
+    }
+  });
+}
+
+function renderSearchResults(){
+  if(!rootNode) return;
+  crumbsEl.style.display = 'none';
+  const query = searchQuery.trim().toLowerCase();
+  const matchedFolders = [];
+  const matchedFiles = [];
+  searchTree(rootNode, [], query, matchedFolders, matchedFiles);
+
+  const total = matchedFolders.length + matchedFiles.length;
+  searchStatusEl.style.display = 'block';
+  searchStatusEl.textContent = total === 0
+    ? `No folders or certificates match "${searchQuery.trim()}".`
+    : `${total} match${total === 1 ? '' : 'es'} for "${searchQuery.trim()}"`;
+
+  if(total === 0){
+    contentEl.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="grid">';
+  matchedFolders.forEach(m => {
+    html += folderTileHtml(m.name, m.path, m.count);
+  });
+  matchedFiles.forEach(f => {
+    html += fileTileHtml(f, true); // show full path since results may span folders
+  });
+  html += '</div>';
+  contentEl.innerHTML = html;
+}
+
+/* ---------- Utilities ---------- */
+
 function escapeAttr(s){
-  return String(s).replace(/'/g, "\\'").replace(/"/g,'&quot;');
+  return String(s).replace(/'/g, "&#39;").replace(/"/g,'&quot;');
+}
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function folderSvg(){
   return `<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`;
